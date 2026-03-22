@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Frequency Field — Visibility by Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Lato:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0D0B1F;
+  --mid: #2D1F4E;
+  --purple: #7B6FD4;
+  --bright: #8B7FE8;
+  --cyan: #4ECFCF;
+  --white: #FFFFFF;
+  --lav: #C4BEFF;
+  --dim: rgba(196,190,255,0.45);
+  --pbg: rgba(10,8,28,0.98);
+}
+html, body { height: 100%; }
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: 'Lato', sans-serif;
+  overflow-x: hidden;
+}
+#starfield {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── PAGE LAYOUT ── */
+.page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 40px 20px 12px;
+  flex-shrink: 0;
+}
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 10px;
+  letter-spacing: 5px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 10px;
+}
+.header h1 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: clamp(24px,4.5vw,44px);
+  line-height: 1.1; margin-bottom: 12px;
+}
+.header h1 span { color: var(--cyan); }
+.header p {
+  font-size: 13.5px; color: var(--lav);
+  max-width: 500px; margin: 0 auto;
+  line-height: 1.7; font-style: italic;
+}
+.tap-hint {
+  text-align: center; color: var(--dim);
+  font-size: 11.5px; margin: 10px 0 4px;
+  letter-spacing: 1.5px;
+}
+
+/* ── MAP + PANEL WRAPPER ── */
+.map-panel-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+}
+
+/* SVG map area */
+.map-area {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  transition: flex 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+.map-area svg {
+  width: 100%; height: auto;
+  display: block;
+}
+
+/* Right panel */
+.right-panel {
+  width: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--pbg);
+  border-left: 1px solid rgba(139,127,232,0);
+  transition: width 0.35s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.35s;
+  position: relative;
+}
+.right-panel.open {
+  width: 360px;
+  border-left-color: rgba(139,127,232,0.25);
+}
+@media (max-width: 700px) {
+  .map-panel-wrap { flex-direction: column; }
+  .right-panel { width: 100% !important; height: 0; border-left: none; border-top: 1px solid rgba(139,127,232,0); transition: height 0.35s cubic-bezier(0.16,1,0.3,1), border-color 0.35s; }
+  .right-panel.open { height: 70vh; border-top-color: rgba(139,127,232,0.25); }
+}
+
+.panel-inner {
+  width: 360px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 0 48px;
+}
+@media (max-width: 700px) {
+  .panel-inner { width: 100%; height: 100%; }
+}
+.panel-inner::-webkit-scrollbar { width: 3px; }
+.panel-inner::-webkit-scrollbar-thumb { background: var(--mid); border-radius: 4px; }
+
+/* Panel top */
+.ptop {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(139,127,232,0.12);
+  display: flex; align-items: flex-start; gap: 12px;
+  position: sticky; top: 0;
+  background: var(--pbg); z-index: 2;
+}
+.picon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: rgba(139,127,232,0.12);
+  border: 1px solid rgba(139,127,232,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.picon.center { background: rgba(78,207,207,0.1); border-color: rgba(78,207,207,0.28); }
+.ptitles { flex: 1; min-width: 0; }
+.pname {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 16px;
+  color: var(--white); line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.psub {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 9px;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--cyan); margin-top: 4px;
+}
+.pclose {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 50%; width: 28px; height: 28px;
+  color: var(--white); font-size: 13px;
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.2s;
+}
+.pclose:hover { background: rgba(255,255,255,0.08); }
+
+.ptagline {
+  padding: 12px 20px;
+  font-size: 13px; color: var(--lav);
+  font-style: italic; line-height: 1.66;
+  border-bottom: 1px solid rgba(139,127,232,0.07);
+}
+
+.psections { padding: 14px 20px 4px; }
+.psec { margin-bottom: 15px; }
+.psec-label {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 8.5px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 5px;
+  display: flex; align-items: center; gap: 6px;
+}
+.psec-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: rgba(78,207,207,0.1);
+}
+.psec p {
+  font-size: 12.5px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.72;
+}
+
+/* Tabs */
+.ptabs {
+  display: flex; margin: 4px 20px 0;
+  border-bottom: 1px solid rgba(139,127,232,0.16);
+}
+.tbtn {
+  flex: 1; background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--dim);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 9px 2px; cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+.tbtn:hover { color: var(--lav); }
+.tbtn.on { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+.tcon { display: none; padding: 10px 20px 4px; }
+.tcon.on { display: block; }
+
+.crow {
+  display: flex; align-items: flex-start;
+  gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid rgba(139,127,232,0.07);
+}
+.crow:last-child { border-bottom: none; }
+.cicon {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: rgba(139,127,232,0.09);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.cdir {
+  width: 18px; flex-shrink: 0;
+  display: flex; align-items: center;
+  justify-content: center; padding-top: 7px;
+  font-size: 12px; font-weight: 700;
+}
+.cdir.r { color: var(--cyan); }
+.cdir.s { color: var(--bright); }
+.cbody { flex: 1; }
+.cname {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 10.5px;
+  color: var(--white); margin-bottom: 2px;
+}
+.cdesc { font-size: 11.5px; color: rgba(196,190,255,0.68); line-height: 1.5; }
+
+.paction {
+  margin: 10px 20px 0;
+  background: rgba(78,207,207,0.05);
+  border: 1px solid rgba(78,207,207,0.16);
+  border-radius: 11px; padding: 13px 15px;
+}
+.paction-lbl {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700; font-size: 8.5px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 6px;
+}
+.paction p { font-size: 12.5px; color: rgba(255,255,255,0.76); line-height: 1.65; }
+
+/* ── NODE STATES ── */
+.node-group { cursor: pointer; }
+.node-circle { transition: filter 0.2s; }
+.node-group:hover .node-circle { filter: brightness(1.3) !important; }
+.node-group.dimmed { opacity: 0.15; transition: opacity 0.3s; }
+.node-group.lit { opacity: 1; transition: opacity 0.3s; }
+
+/* Connection lines */
+.cline { transition: opacity 0.3s, stroke-width 0.3s; opacity: 0.12; }
+.cline.lit { opacity: 1 !important; }
+.cline.dim { opacity: 0.03 !important; }
+
+@keyframes cpulse {
+  0%,100% { r:68; opacity:0.18; } 50% { r:80; opacity:0.05; }
+}
+.cpulse { animation: cpulse 3s ease-in-out infinite; }
+@keyframes npulse {
+  0%,100% { r:48; opacity:0.16; } 50% { r:56; opacity:0.05; }
+}
+.npulse { animation: npulse 3.5s ease-in-out infinite; }
+
+/* ── BELOW MAP ── */
+.below-map {
+  max-width: 860px; margin: 0 auto;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+/* Guided paths */
+.paths-section {
+  margin: 22px 0 0;
+}
+.paths-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 9.5px;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--dim); text-align: center;
+  margin-bottom: 14px;
+}
+.paths-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 500px) { .paths-grid { grid-template-columns: 1fr; } }
+.path-card {
+  background: rgba(45,31,78,0.3);
+  border: 1px solid rgba(139,127,232,0.18);
+  border-radius: 14px; padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.path-card:hover {
+  border-color: rgba(139,127,232,0.4);
+  background: rgba(45,31,78,0.5);
+}
+.path-steps {
+  font-size: 16px; margin-bottom: 7px;
+  letter-spacing: 3px;
+}
+.path-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 12px;
+  color: var(--cyan); margin-bottom: 3px;
+}
+.path-desc { font-size: 11.5px; color: var(--dim); line-height: 1.5; }
+
+/* HTR */
+.htr {
+  margin: 18px 0 0;
+  background: rgba(45,31,78,0.3);
+  border: 1px solid rgba(139,127,232,0.16);
+  border-radius: 14px; padding: 18px 20px;
+}
+.htr-title {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 9.5px;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 13px;
+}
+.htr-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+@media (max-width: 500px) { .htr-grid { grid-template-columns: 1fr; } }
+.htr-row { display: flex; gap: 9px; align-items: flex-start; }
+.hdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.htr-row p { font-size: 12px; color: rgba(196,190,255,0.75); line-height: 1.58; }
+.htr-row p strong { color: var(--white); }
+.htr-quote {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(139,127,232,0.1);
+  font-size: 12.5px; color: var(--lav);
+  font-style: italic; line-height: 1.7; text-align: center;
+}
+
+.footer {
+  text-align: center; padding: 24px 20px 44px;
+}
+.footer p {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900; font-size: 10px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--purple);
+}
+.footer span { color: var(--cyan); }
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+
+<div class="page">
+  <div class="header">
+    <div class="eyebrow">Visibility by Design</div>
+    <h1>The <span>Frequency</span> Field</h1>
+    <p>You are not building an audience. You are cultivating a living ecosystem. Everything you create either plants, waters, or harvests.</p>
+  </div>
+  <div class="tap-hint">🌀 Tap any node to explore its role in the field 🌀</div>
+
+  <div class="map-panel-wrap">
+    <!-- MAP -->
+    <div class="map-area" id="mapArea">
+      <svg id="esvg" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="gc" x="-70%" y="-70%" width="240%" height="240%">
+            <feGaussianBlur stdDeviation="9" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="gp" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="go" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="rgc" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#4ECFCF" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#1D8080" stop-opacity="0.8"/>
+          </radialGradient>
+          <radialGradient id="rgi" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#8B7FE8" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#4A3FA0" stop-opacity="0.82"/>
+          </radialGradient>
+          <radialGradient id="rgo" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#5A4FA8" stop-opacity="0.72"/>
+            <stop offset="100%" stop-color="#2D1F4E" stop-opacity="0.5"/>
+          </radialGradient>
+          <marker id="mp" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+            <polygon points="0 0,7 3.5,0 7" fill="#8B7FE8"/>
+          </marker>
+          <marker id="mc" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">
+            <polygon points="0 0,7 3.5,0 7" fill="#4ECFCF"/>
+          </marker>
+        </defs>
+
+        <!--
+          Positions:
+          portal  400,295  (center)
+          hd      192,128  (top-L inner)
+          yt      100,295  (left inner)
+          ig      192,462  (bot-L inner)
+          tt      608,462  (bot-R inner)
+          live    700,295  (right inner)
+          ore     608,128  (top-R inner)
+          beacon  400, 44  (top-C outer)
+          ads      46,168  (far-L outer)
+          dms     754,168  (far-R outer)
+          tracker 400,546  (bot-C outer)
+        -->
+
+        <!-- LINES  data-n="A,B" -->
+        <!-- Portal ↔ Beacon -->
+        <line class="cline" data-n="portal,beacon" x1="400" y1="241" x2="400" y2="80" stroke="#4ECFCF" stroke-width="1.4" marker-end="url(#mc)"/>
+        <line class="cline" data-n="beacon,portal" x1="406" y1="80" x2="406" y2="241" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <!-- HD lines -->
+        <line class="cline" data-n="hd,portal" x1="225" y1="148" x2="368" y2="272" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="hd,yt" x1="168" y1="160" x2="114" y2="258" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="hd,ig" x1="203" y1="166" x2="203" y2="424" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="5 5" marker-end="url(#mp)"/>
+        <line class="cline" data-n="hd,beacon" x1="232" y1="116" x2="368" y2="56" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 6" marker-end="url(#mp)"/>
+        <!-- YT lines -->
+        <line class="cline" data-n="yt,portal" x1="140" y1="287" x2="338" y2="287" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="portal,yt" x1="338" y1="294" x2="140" y2="294" stroke="#4ECFCF" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mc)"/>
+        <line class="cline" data-n="yt,ig" x1="132" y1="325" x2="166" y2="434" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <line class="cline" data-n="yt,tt" x1="138" y1="308" x2="570" y2="450" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="3 7" marker-end="url(#mp)"/>
+        <line class="cline" data-n="yt,ads" x1="106" y1="256" x2="76" y2="200" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 6" marker-end="url(#mp)"/>
+        <!-- IG lines -->
+        <line class="cline" data-n="ig,portal" x1="228" y1="444" x2="366" y2="320" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="portal,ig" x1="372" y1="320" x2="234" y2="444" stroke="#4ECFCF" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mc)"/>
+        <line class="cline" data-n="ig,dms" x1="228" y1="450" x2="726" y2="196" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 6" marker-end="url(#mp)"/>
+        <line class="cline" data-n="ig,ads" x1="166" y1="445" x2="70" y2="198" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="3 7" marker-end="url(#mp)"/>
+        <line class="cline" data-n="ig,tt" x1="230" y1="463" x2="570" y2="463" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="3 7" marker-end="url(#mp)"/>
+        <!-- TT lines -->
+        <line class="cline" data-n="tt,portal" x1="572" y1="444" x2="434" y2="320" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="portal,tt" x1="428" y1="320" x2="566" y2="444" stroke="#4ECFCF" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mc)"/>
+        <line class="cline" data-n="tt,ig" x1="568" y1="469" x2="230" y2="469" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="3 7" marker-end="url(#mp)"/>
+        <line class="cline" data-n="tt,live" x1="648" y1="445" x2="687" y2="333" stroke="#8B7FE8" stroke-width="1.4" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <!-- Live lines -->
+        <line class="cline" data-n="live,portal" x1="660" y1="288" x2="460" y2="288" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="live,dms" x1="718" y1="258" x2="748" y2="204" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="live,ig" x1="672" y1="330" x2="228" y2="454" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 6" marker-end="url(#mp)"/>
+        <!-- Ore lines -->
+        <line class="cline" data-n="ore,portal" x1="576" y1="148" x2="434" y2="268" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="portal,ore" x1="428" y1="262" x2="570" y2="148" stroke="#4ECFCF" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mc)"/>
+        <line class="cline" data-n="ore,yt" x1="574" y1="142" x2="140" y2="268" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <line class="cline" data-n="ore,ig" x1="588" y1="164" x2="224" y2="436" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="3 7" marker-end="url(#mp)"/>
+        <line class="cline" data-n="ore,tt" x1="612" y1="164" x2="616" y2="424" stroke="#8B7FE8" stroke-width="1.4" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <!-- Ads lines -->
+        <line class="cline" data-n="ads,portal" x1="78" y1="190" x2="342" y2="276" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <line class="cline" data-n="portal,ads" x1="342" y1="270" x2="78" y2="184" stroke="#4ECFCF" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mc)"/>
+        <line class="cline" data-n="ads,yt" x1="68" y1="196" x2="100" y2="258" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 5" marker-end="url(#mp)"/>
+        <line class="cline" data-n="ads,ig" x1="64" y1="202" x2="158" y2="436" stroke="#8B7FE8" stroke-width="1" stroke-dasharray="4 6" marker-end="url(#mp)"/>
+        <!-- DMs line -->
+        <line class="cline" data-n="dms,portal" x1="722" y1="190" x2="458" y2="276" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+        <!-- Tracker line -->
+        <line class="cline" data-n="tracker,portal" x1="400" y1="514" x2="400" y2="357" stroke="#8B7FE8" stroke-width="1.4" marker-end="url(#mp)"/>
+
+        <!-- ── NODES ── -->
+
+        <!-- CENTER: THE PORTAL -->
+        <g class="node-group" data-node="portal" onclick="tap('portal')">
+          <circle cx="400" cy="295" r="68" fill="none" stroke="#4ECFCF" stroke-width="1" opacity="0.15" class="cpulse"/>
+          <circle cx="400" cy="295" r="54" fill="url(#rgc)" class="node-circle" filter="url(#gc)"/>
+          <text x="400" y="286" text-anchor="middle" font-size="22">🌀</text>
+          <text x="400" y="306" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="9.5" fill="white">SKOOL COMMUNITY</text>
+          <text x="400" y="319" text-anchor="middle" font-family="Lato,sans-serif" font-size="8" fill="rgba(78,207,207,0.92)" font-style="italic">The Portal</text>
+        </g>
+
+        <!-- HD top-L -->
+        <g class="node-group" data-node="hd" onclick="tap('hd')">
+          <circle cx="192" cy="128" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="192" cy="128" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="192" y="120" text-anchor="middle" font-size="17">🧬</text>
+          <text x="192" y="139" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">HUMAN DESIGN</text>
+          <text x="192" y="151" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Source Code</text>
+        </g>
+
+        <!-- YT left -->
+        <g class="node-group" data-node="yt" onclick="tap('yt')">
+          <circle cx="100" cy="295" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="100" cy="295" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="100" y="287" text-anchor="middle" font-size="17">▶️</text>
+          <text x="100" y="306" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">YOUTUBE</text>
+          <text x="100" y="318" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Root System</text>
+        </g>
+
+        <!-- IG bot-L -->
+        <g class="node-group" data-node="ig" onclick="tap('ig')">
+          <circle cx="192" cy="462" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="192" cy="462" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="192" y="454" text-anchor="middle" font-size="17">🌿</text>
+          <text x="192" y="473" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">INSTAGRAM</text>
+          <text x="192" y="485" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Garden Gate</text>
+        </g>
+
+        <!-- TT bot-R -->
+        <g class="node-group" data-node="tt" onclick="tap('tt')">
+          <circle cx="608" cy="462" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="608" cy="462" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="608" y="454" text-anchor="middle" font-size="17">🎵</text>
+          <text x="608" y="473" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">TIKTOK</text>
+          <text x="608" y="485" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Wind</text>
+        </g>
+
+        <!-- Live right -->
+        <g class="node-group" data-node="live" onclick="tap('live')">
+          <circle cx="700" cy="295" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="700" cy="295" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="700" y="287" text-anchor="middle" font-size="17">🔥</text>
+          <text x="700" y="306" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">TIKTOK LIVE</text>
+          <text x="700" y="318" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Gathering</text>
+        </g>
+
+        <!-- Ore top-R -->
+        <g class="node-group" data-node="ore" onclick="tap('ore')">
+          <circle cx="608" cy="128" r="48" fill="none" stroke="#7B6FD4" stroke-width="1" opacity="0.18" class="npulse"/>
+          <circle cx="608" cy="128" r="38" fill="url(#rgi)" class="node-circle" filter="url(#gp)"/>
+          <text x="608" y="120" text-anchor="middle" font-size="17">💎</text>
+          <text x="608" y="139" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="900" font-size="8.5" fill="white">LOOM / TRANSCRIPTS</text>
+          <text x="608" y="151" text-anchor="middle" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.85)" font-style="italic">The Ore</text>
+        </g>
+
+        <!-- Beacon top-C outer -->
+        <g class="node-group" data-node="beacon" onclick="tap('beacon')">
+          <circle cx="400" cy="44" r="36" fill="url(#rgo)" class="node-circle" filter="url(#go)"/>
+          <text x="400" y="36" text-anchor="middle" font-size="14">🏮</text>
+          <text x="400" y="54" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="700" font-size="7.5" fill="rgba(196,190,255,0.9)">THE OFFER</text>
+          <text x="400" y="66" text-anchor="middle" font-family="Lato,sans-serif" font-size="7" fill="rgba(196,190,255,0.55)" font-style="italic">The Beacon</text>
+        </g>
+
+        <!-- Ads far-L outer -->
+        <g class="node-group" data-node="ads" onclick="tap('ads')">
+          <circle cx="46" cy="168" r="32" fill="url(#rgo)" class="node-circle" filter="url(#go)"/>
+          <text x="46" y="161" text-anchor="middle" font-size="13">📣</text>
+          <text x="46" y="178" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="700" font-size="7" fill="rgba(196,190,255,0.88)">META ADS</text>
+          <text x="46" y="190" text-anchor="middle" font-family="Lato,sans-serif" font-size="6.5" fill="rgba(196,190,255,0.5)" font-style="italic">The Megaphone</text>
+        </g>
+
+        <!-- DMs far-R outer -->
+        <g class="node-group" data-node="dms" onclick="tap('dms')">
+          <circle cx="754" cy="168" r="32" fill="url(#rgo)" class="node-circle" filter="url(#go)"/>
+          <text x="754" y="161" text-anchor="middle" font-size="13">💬</text>
+          <text x="754" y="178" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="700" font-size="7" fill="rgba(196,190,255,0.88)">DMS</text>
+          <text x="754" y="190" text-anchor="middle" font-family="Lato,sans-serif" font-size="6.5" fill="rgba(196,190,255,0.5)" font-style="italic">The Harvest</text>
+        </g>
+
+        <!-- Tracker bot-C outer -->
+        <g class="node-group" data-node="tracker" onclick="tap('tracker')">
+          <circle cx="400" cy="546" r="32" fill="url(#rgo)" class="node-circle" filter="url(#go)"/>
+          <text x="400" y="539" text-anchor="middle" font-size="13">🧭</text>
+          <text x="400" y="556" text-anchor="middle" font-family="Montserrat,sans-serif" font-weight="700" font-size="7" fill="rgba(196,190,255,0.88)">VBD TRACKER</text>
+          <text x="400" y="568" text-anchor="middle" font-family="Lato,sans-serif" font-size="6.5" fill="rgba(196,190,255,0.5)" font-style="italic">The North Star</text>
+        </g>
+
+        <!-- Legend -->
+        <line x1="298" y1="584" x2="316" y2="584" stroke="rgba(139,127,232,0.6)" stroke-width="1.4" marker-end="url(#mp)"/>
+        <text x="320" y="588" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.45)">Active flow</text>
+        <line x1="364" y1="584" x2="382" y2="584" stroke="rgba(139,127,232,0.35)" stroke-width="1" stroke-dasharray="3 5" marker-end="url(#mp)"/>
+        <text x="386" y="588" font-family="Lato,sans-serif" font-size="7.5" fill="rgba(196,190,255,0.35)">Cross-channel</text>
+      </svg>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel" id="rightPanel">
+      <div class="panel-inner" id="panelInner">
+        <div class="ptop">
+          <div class="picon" id="pIcon">🌀</div>
+          <div class="ptitles">
+            <div class="pname" id="pName"></div>
+            <div class="psub" id="pSub"></div>
+          </div>
+          <button class="pclose" onclick="closePnl()">✕</button>
+        </div>
+        <div class="ptagline" id="pTagline"></div>
+        <div class="psections" id="pSections"></div>
+        <div class="ptabs">
+          <button class="tbtn on" id="btnR" onclick="stab('r',this)">Receives</button>
+          <button class="tbtn" id="btnS" onclick="stab('s',this)">Sends</button>
+          <button class="tbtn" onclick="stab('a',this)">All</button>
+        </div>
+        <div class="tcon on" id="tcR"></div>
+        <div class="tcon" id="tcS"></div>
+        <div class="tcon" id="tcA"></div>
+        <div class="paction">
+          <div class="paction-lbl">→ Your Move</div>
+          <p id="pAct"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BELOW MAP -->
+  <div class="below-map">
+
+    <!-- Guided Paths -->
+    <div class="paths-section">
+      <div class="paths-title">✦ Guided Paths ✦</div>
+      <div class="paths-grid">
+        <div class="path-card" onclick="runPath(['portal','hd','beacon'])">
+          <div class="path-steps">🌀 → 🧬 → 🏮</div>
+          <div class="path-name">Start Here</div>
+          <div class="path-desc">The foundation — your portal, your source code, your signal</div>
+        </div>
+        <div class="path-card" onclick="runPath(['ore','yt','ig','tt'])">
+          <div class="path-steps">💎 → ▶️ → 🌿 → 🎵</div>
+          <div class="path-name">The Visibility Machine</div>
+          <div class="path-desc">One recording fuels every channel</div>
+        </div>
+        <div class="path-card" onclick="runPath(['portal','ig','dms','portal'])">
+          <div class="path-steps">🌀 → 🌿 → 💬 → 🌀</div>
+          <div class="path-name">The Conversion Loop</div>
+          <div class="path-desc">How strangers become paying members</div>
+        </div>
+        <div class="path-card" onclick="runPath(['portal','ads','portal'])">
+          <div class="path-steps">🌀 → 📣 → 🌀</div>
+          <div class="path-name">The Amplifier Path</div>
+          <div class="path-desc">When your organic system is working, this multiplies it</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How to read -->
+    <div class="htr">
+      <div class="htr-title">🌀 How to Read This Map</div>
+      <div class="htr-grid">
+        <div class="htr-row">
+          <div class="hdot" style="background:var(--cyan)"></div>
+          <p><strong>The Portal (center)</strong> is the gravitational center. Every node flows toward it. Free + paid Skool, all one field.</p>
+        </div>
+        <div class="htr-row">
+          <div class="hdot" style="background:var(--bright)"></div>
+          <p><strong>Inner ring</strong> nodes are your active visibility channels — the daily and weekly work that keeps the field alive.</p>
+        </div>
+        <div class="htr-row">
+          <div class="hdot" style="background:rgba(196,190,255,0.38)"></div>
+          <p><strong>Outer ring</strong> nodes amplify and convert — they multiply what is already working inside the field.</p>
+        </div>
+        <div class="htr-row">
+          <div class="hdot" style="background:var(--cyan)"></div>
+          <p><strong>Tap any node</strong> to light up its connections and explore what it receives, what it sends, and your next move.</p>
+        </div>
+      </div>
+      <div class="htr-quote">"Your Source Code sets the frequency. Your content carries it across the field. Your Portal is where the right people land and take root."</div>
+    </div>
+
+    <div class="footer">
+      <p>Visibility by Design — <span>The Frequency Field</span> 🌀</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARS ──
+const cv = document.getElementById('starfield');
+const cx = cv.getContext('2d');
+let stars = [];
+function rsz() { cv.width = innerWidth; cv.height = innerHeight; }
+rsz(); addEventListener('resize', rsz);
+for (let i=0;i<200;i++) stars.push({x:Math.random()*3000,y:Math.random()*3000,r:Math.random()*1.3+0.2,sp:Math.random()*0.003+0.001,ph:Math.random()*Math.PI*2});
+function drawS(t) {
+  cx.clearRect(0,0,cv.width,cv.height);
+  stars.forEach(s=>{
+    s.x%=cv.width; s.y%=cv.height;
+    const a=0.2+0.5*Math.sin(t*s.sp+s.ph);
+    cx.beginPath(); cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    cx.fillStyle=`rgba(255,255,255,${a})`; cx.fill();
+  });
+  requestAnimationFrame(drawS);
+}
+requestAnimationFrame(drawS);
+
+// ── DATA ──
+const ND = {
+  portal:{
+    icon:'🌀',name:'Skool Community',sub:'The Portal — Free & Paid',isCenter:true,
+    tagline:'This is where your frequency becomes a home. Free Skool captures leads and builds trust. Paid Skool is where deeper transformation and real recurring revenue live. Every platform, every piece of content — all roads lead here.',
+    what:'Your Skool community is the gravitational center of your entire visibility ecosystem and the only asset you truly own. The freemium model means your free community acts as a nurture layer — people enter, feel your field, and self-select into paid when the time is right. No algorithm can take this from you.',
+    why:'Communities compound. Every new member makes it more valuable for every existing member. More members means more questions, more wins, more proof, more energy. You can lose access to Instagram overnight. You cannot lose Skool.',
+    how:'Optimize your about page like a sales page — clear transformation promise, credibility, and one CTA. Set up your classroom as your content library. Turn on Discovery. Use all 7 post types to keep the community alive and growing. Let the free tier feed the paid tier naturally.',
+    receives:[
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'DMs and comment ladders convert profile visitors into members.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Trust built over videos converts viewers and reactivates existing members.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Discovery viewers follow your bio link and enter the portal.'},
+      {icon:'🔥',name:'TikTok Live — The Gathering',desc:'Live viewers convert at high rates — they\'ve spent real time in your field.'},
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'Paid traffic lands directly on your about page.'},
+      {icon:'💬',name:'DMs — The Harvest',desc:'Warm conversations convert into paid membership.'},
+      {icon:'💎',name:'Loom / Transcripts — The Ore',desc:'Raw recordings become community posts, classroom content, and member resources.'},
+      {icon:'🧭',name:'VBD Tracker — The North Star',desc:'Daily check-in posts keep the community alive and visible.'},
+    ],
+    sends:[
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'Member results and wins become your most powerful proof.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Community questions and patterns feed your video topic ideas.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Community wins and member stories fuel your social content.'},
+      {icon:'🏮',name:'The Offer — The Beacon',desc:'Real people who join shape what you build next.'},
+      {icon:'💎',name:'Loom / Transcripts — The Ore',desc:'Coaching calls and co-teaching sessions feed the entire content engine.'},
+    ],
+    action:'Check your Skool discovery settings are on. Confirm your about page has a clear transformation promise and one CTA. Your free community should feel like a destination, not a waiting room.'
+  },
+  hd:{
+    icon:'🧬',name:'Human Design',sub:'The Source Code — Your Energetic Blueprint',
+    tagline:'Your aura type, authority, and profile lines are not personality trivia. They are your visibility strategy. You cannot sustainably grow out of alignment.',
+    what:'Your Human Design is the root frequency of everything you create. It tells you how to show up, how often, in what format, and with what energy. Generators and MGs can post daily and feel energized. Projectors create deeply, not constantly. Manifestors burst when inspired, then rest. Reflectors follow the lunar cycle.',
+    why:'In a world full of AI-generated content, your energetic authenticity is your competitive advantage. The spiritual entrepreneur who creates from alignment converts better, burns out less, and attracts clients who are already a frequency match. This is not a soft concept — it directly determines your output, sustainability, and conversion rate.',
+    how:'Know your type\'s content rhythm and honor it. Know your authority — it tells you how to make decisions in your business. Let your profile lines inform your content style and communication approach. Build a visibility strategy that works with your energy, not against it.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Community feedback shows you what is landing and what is draining your energy.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Aligned energy makes your community posts magnetic and your engagement genuine.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Your design tells you your ideal recording rhythm, format, and depth.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Your profile line shapes your content style — storyteller, teacher, researcher, networker.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Your aura type determines your short-form energy and authenticity level.'},
+      {icon:'🏮',name:'The Offer — The Beacon',desc:'Your design reveals the delivery model and offer structure that will sustain you.'},
+    ],
+    action:'Pull your Master Design Profile and extract your top 2 content creation insights. Make them non-negotiables. Stop creating content that fights your energy.'
+  },
+  yt:{
+    icon:'▶️',name:'YouTube',sub:'The Root System — Your Trust Builder',
+    tagline:'You can buy reach with ads. You cannot buy trust. YouTube builds the 7+ hours of relationship needed for a high-ticket decision — while you sleep.',
+    what:'YouTube is your long-form trust channel. People spend real time with you here — watching, rewatching, bingeing. In 2026, AI search (ChatGPT, Perplexity, Google AI Overview) actively surfaces YouTube content. Showing up on YouTube is showing up in AI search. This is long-game compounding at its most powerful.',
+    why:'Most of your competitors are focused on short-form. YouTube is the underground root system — invisible while it grows, until suddenly it is feeding everything above ground. One well-titled video can bring clients for five years.',
+    how:'Start with a Loom recorded as unlisted. Use your YouTube Content Studio to turn that recording into a titled, scripted video. Build your Binge Bank — 5 to 7 anchor videos that answer your audience\'s biggest questions. End every video with a verbal CTA to your free Skool.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Community questions, wins, and patterns feed your video ideas.'},
+      {icon:'💎',name:'Loom / Transcripts — The Ore',desc:'A brain dump Loom becomes your script, title, and thumbnail brief in one workflow.'},
+      {icon:'🧬',name:'Human Design — The Source Code',desc:'Your design tells you the right recording rhythm — batch or weekly, scripted or raw.'},
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'Ads can boost individual videos and accelerate reach.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Every video ends with a CTA — viewers become community members.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Video hooks become reels; long-form becomes carousels and posts.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Clips from YouTube become standalone short-form content.'},
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'High-performing video hooks become ad creative.'},
+    ],
+    action:'Film or finalize one Binge Bank anchor video this week. End it with a verbal CTA to your Skool. Put it in a Binge Bank playlist. This is your long-game investment.'
+  },
+  ig:{
+    icon:'🌿',name:'Instagram',sub:'The Garden Gate — Your Authority Showcase',
+    tagline:'The garden gate is what strangers pass through before they reach the portal. Your bio, your pinned posts, your carousels — this is your 24/7 conversion funnel.',
+    what:'Instagram is the most frictionless conversion path for spiritual entrepreneurs. Your bio is a storefront people decide in 3 seconds. Your three pinned posts work as a permanent Connect / Compel / Convert funnel. Your comment funnels take someone from a comment keyword directly into your Skool via automated DM — zero friction, zero ad spend.',
+    why:'Ad viewers look you up. Profile visitors decide in seconds. Your feed is the gate — it catches attention and signals whether this is a place worth entering. Stories build intimacy. DMs close. When this system is built correctly it runs itself: content → comment → DM → Skool.',
+    how:'Build your S.O.U.L. bio. Set up your three pinned posts — Connect, Compel, Convert. Use the Triple Hook Strategy on carousels — hooks on slides 1, 2, AND 3. Set up a comment funnel with ManyChat for at least one post.',
+    receives:[
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Video hooks and clips repurposed into reels and carousels.'},
+      {icon:'💎',name:'Loom / Transcripts — The Ore',desc:'A single brain dump produces carousels, captions, and reel scripts.'},
+      {icon:'🌀',name:'Skool Portal',desc:'Community wins, questions, and member stories become social proof content.'},
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'Ad viewers look up your profile — organic content handles mid and bottom of funnel.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'TikTok content cross-posted or repurposed for Instagram reels.'},
+      {icon:'🔥',name:'TikTok Live — The Gathering',desc:'Live clips repurposed as reels and story content.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Comment funnels and bio links drive profile visitors directly to your portal.'},
+      {icon:'💬',name:'DMs — The Harvest',desc:'Stories and comment responses move warm leads into DM conversations.'},
+      {icon:'📣',name:'Meta Ads — The Megaphone',desc:'High-performing organic posts become ad creative.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Instagram content cross-posted to TikTok.'},
+    ],
+    action:'Confirm your three pinned posts are live — Connect, Compel, Convert. Check your bio is S.O.U.L. compliant. Set up one comment funnel trigger this week if you haven\'t yet.'
+  },
+  tt:{
+    icon:'🎵',name:'TikTok',sub:'The Wind — Your Discovery Engine',
+    tagline:'The wind carries seeds to places you could never reach yourself. TikTok finds people who would never find you anywhere else — total strangers who become your most loyal members.',
+    what:'TikTok is pure cold discovery. Unlike Instagram or YouTube where people already know you, TikTok actively serves your content to strangers. The algorithm rewards authenticity over polish in 2026. Every video must work as a completely standalone piece — no context assumed. Each video is someone\'s first impression of you.',
+    why:'Nano-niche wins. "I help Projectors in business who are burning out from Generator strategies" beats "I\'m a spiritual coach" every time. The more specific you are, the more the algorithm knows exactly who to show you to.',
+    how:'Use the Short-Form Script Studio. Layer three simultaneous hooks: visual hook (first frame), text hook (on-screen text), audio hook (first words). Script your first three seconds before anything else. Post one to three times per week.',
+    receives:[
+      {icon:'▶️',name:'YouTube — The Root System',desc:'YouTube clips become standalone TikToks — one recording, multiple platforms.'},
+      {icon:'💎',name:'Loom / Transcripts — The Ore',desc:'Brain dump transcript becomes a week of short-form scripts.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'High-performing Instagram reels cross-posted to TikTok.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Bio link and verbal CTAs drive discovered viewers to your portal.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'TikTok content repurposed for Instagram reels.'},
+      {icon:'🔥',name:'TikTok Live — The Gathering',desc:'Short-form videos build the audience who show up to your lives.'},
+    ],
+    action:'Script one standalone short-form video using the Script Studio. Write your hook first — all three layers. Make sure it works with zero context about who you are.'
+  },
+  live:{
+    icon:'🔥',name:'TikTok Live',sub:'The Gathering — Your Real-Time Field',
+    tagline:'A live is not a broadcast. It is a gathering. People who stumble in and stay for an hour have spent more time in your field than someone who followed you a year ago.',
+    what:'TikTok Live is its own ecosystem within the ecosystem. Unlike short-form which is algorithm-distributed, a live is an active gathering — people choose to stay, interact, and feel your energy in real time. TikTok actively pushes live content to non-followers, meaning complete strangers can discover you mid-conversation and stay for the whole thing.',
+    why:'Real-time connection converts differently than recorded content. Someone who spends 45 minutes in a live with you has the equivalent of a real relationship. They have heard you think out loud, seen you answer questions, felt your energy unfiltered. This is the fastest path from stranger to paying member in organic content right now.',
+    how:'Go live consistently — even 30 minutes once or twice a week compounds fast. Open with a hook that tells newcomers exactly who this is for. Invite people to your free Skool community during the live. Repurpose clips from your best live moments into short-form content.',
+    receives:[
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Short-form videos build the audience that shows up to your lives.'},
+      {icon:'🌀',name:'Skool Portal',desc:'Community members join your lives and bring energy — social proof in real time.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Live CTAs convert viewers directly — highest-converting organic path available.'},
+      {icon:'💬',name:'DMs — The Harvest',desc:'Viewers DM during and after lives — warm leads at their warmest.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Live clips repurposed as reels and stories.'},
+    ],
+    action:'Schedule one TikTok Live this week. Even 30 minutes. Open with who this is for, close with a CTA to your free Skool. Repurpose the best 60 seconds as a short-form clip.'
+  },
+  ore:{
+    icon:'💎',name:'Loom / Transcripts',sub:'The Ore — Your Raw Material',
+    tagline:'Raw ore is worthless in the ground. Extracted and refined, it becomes everything. One 15-minute Loom is the raw material for an entire week of content across every platform.',
+    what:'The Ore is any raw recording — a Loom brain dump, a coaching call, a co-teaching session, a voice memo. Loom auto-generates the transcript. That single document is your content goldmine. Feed it to Claude and extract your YouTube script, carousel frames, reel hooks, community posts — all from one conversation you were already having.',
+    why:'Most creators buy a new cow for every meal. They create each piece of content from scratch, burning energy on blank pages every day. One aligned recording produces 9 or more pieces of content across every channel. Your clients are telling you exactly what to build in every call — the transcript surfaces it.',
+    how:'Record yourself talking about what is top of mind. Aim for 10 to 15 minutes. Let it be raw and real — polish comes in the editing. Feed the transcript through your Repurposing Engine, Script Studio, Hot Take Miner, and Carousel Creator. One recording fuels your entire content week.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Community questions and coaching calls are the highest-quality ore available.'},
+      {icon:'🧬',name:'Human Design — The Source Code',desc:'Your design tells you when and how to record for maximum alignment and quality.'},
+    ],
+    sends:[
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Transcript becomes your script, title, and video outline.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Transcript becomes carousels, captions, and reel scripts.'},
+      {icon:'🎵',name:'TikTok — The Wind',desc:'Transcript becomes standalone short-form hooks and scripts.'},
+      {icon:'🌀',name:'Skool Portal',desc:'Brain dumps become community posts, classroom content, and member resources.'},
+    ],
+    action:'This week: record one 10 to 15 minute Loom on a topic that is top of mind. Feed the transcript through at least two tools. Count how many pieces of content you produce from that single recording.'
+  },
+  beacon:{
+    icon:'🏮',name:'The Offer',sub:'The Beacon — Your Signal',
+    tagline:'You light the beacon before anyone arrives. It is what calls your people home. Cast the vision first — real people who show up will shape what it becomes.',
+    what:'Your offer is whatever you sell — your community, your course, your coaching, your service. The Beacon philosophy means you build it before you have proof. Write your about page first, cast the vision, and drive traffic to it. The people who arrive tell you what they actually need. You refine.',
+    why:'Without product-market fit, nothing works. You cannot out-optimize a weak offer. But you cannot find product-market fit without visibility. Visibility and offer development are an infinite loop that refines both simultaneously.',
+    how:'Write your about page or sales page first. Treat it like a beacon — clear, specific, and compelling even before the product is fully built. Drive traffic. Learn from real people. Refine your promise based on who actually shows up. Let the community shape the curriculum.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Real community members reveal what they actually need — shaping what you build next.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'A clear offer on your about page is the main reason strangers become members.'},
+      {icon:'🧬',name:'Human Design — The Source Code',desc:'Your design determines the delivery model that will sustain you vs. drain you.'},
+    ],
+    action:'Read your current about page out loud. Does it name a specific person? Does it promise a specific result? Is the offer clear in the first sentence? If not — rewrite the headline today.'
+  },
+  ads:{
+    icon:'📣',name:'Meta Ads',sub:'The Megaphone — Your Amplifier',
+    tagline:'A megaphone amplifies what you are already saying. Ads on a working organic system multiply momentum. Ads on a broken funnel just broadcast the leak louder.',
+    what:'Meta Ads are the intentional amplification layer — something you turn on strategically when your organic foundation is in place. That means a clear niche, an optimized Skool about page, and content that is already resonating with real people. When those three things exist, even $5 to $20 per day can dramatically accelerate what you have already built.',
+    why:'Ads do not create traction. They amplify what is already there. When your organic system is working, ads are a multiplier. When it is not, they are an expensive way to find out. The most strategic way to use Meta Ads as a spiritual entrepreneur is to validate and drive traffic — about page validation ads that test your messaging, mockup ads that sell the vision of your community, and mini offer ads that bring people in through a low-friction entry point.',
+    how:'Start with your organic foundation — clear niche, converting about page, content already resonating. Then identify your strongest angle: a validation ad testing your about page messaging, a mockup ad selling the vision of your community, or a mini offer ad driving a low-friction entry point. Start small, let the data tell you what to scale.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Member results and community energy inform what proof to use in ads.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'High-performing organic posts become ad creative.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Video hooks that perform well become ad creative.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Cold ad traffic lands on your about page and enters the portal.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Ad viewers look up your profile — organic content closes them.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Ads can boost video reach and accelerate watch time.'},
+    ],
+    action:'Clear niche, optimized about page, content already resonating? If yes — pick one ad angle this week. Validation, mockup, or mini offer. Start small and let the data lead.'
+  },
+  dms:{
+    icon:'💬',name:'DMs',sub:'The Harvest — Where It Closes',
+    tagline:'Everything else plants and waters. DMs are where you harvest. The close is not the beginning of the relationship — it is the natural end of one that has already been built.',
+    what:'DMs are where warm relationships become paying members. A DM conversation is not a cold pitch — it is the last step of a trust journey that started with content. Someone who has watched your YouTube, read your carousels, seen your stories, and found their way to your inbox is already most of the way there.',
+    why:'The DM Sales Flow is not about convincing — it is about qualifying and inviting. The right person does not need to be sold. They need to feel seen and hear a clear path forward. DMs also function as real-time market research — every question, objection, and hesitation is data that sharpens your content and offer.',
+    how:'Use the DM Sales Flow: open with genuine curiosity, reflect what they share, bridge to your offer only when there is a clear fit, make the invitation clean and direct. Set up comment funnels so warm leads land in your DMs automatically.',
+    receives:[
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Comment funnels and stories move warm leads into DM conversations automatically.'},
+      {icon:'🌀',name:'Skool Portal',desc:'Free community members who are ready to upgrade reach out via DM.'},
+      {icon:'🔥',name:'TikTok Live — The Gathering',desc:'Viewers who connect during a live reach out via DM immediately after.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Converted DM conversations become paid Skool members.'},
+    ],
+    action:'Review your last 10 DM conversations. How many resulted in a clear invitation? Where did conversations drop off? That gap is your next content brief.'
+  },
+  tracker:{
+    icon:'🧭',name:'VBD Tracker',sub:'The North Star — Your Accountability System',
+    tagline:'The North Star does not move. It is the fixed point you navigate from. The tracker makes your invisible effort visible — and what gets measured, gets improved.',
+    what:'The VBD Daily Tracker is your accountability layer for the entire ecosystem. Every morning you set your intention. Every evening you log your stats — Skool group activity, engagement numbers, profile visits, follower movement, discovery rate. The momentum bar tracks your implementation ratio.',
+    why:'Visibility feels invisible when it is working slowly. The tracker creates awareness of the gap between consumption and implementation. One week of honest tracking reveals more about your business than three months of journaling.',
+    how:'Open your tracker every morning. Log your morning practices and set a daily intention. In the evening, update your stats across all three sections — Skool Group Stats, Group Engagement, Profile Activity. Post your daily check-in to the community.',
+    receives:[
+      {icon:'🌀',name:'Skool Portal',desc:'Group stats, engagement numbers, and member growth are what you track daily.'},
+      {icon:'🌿',name:'Instagram — The Garden Gate',desc:'Profile visits, follower count, and DM volume feed your daily stats.'},
+      {icon:'▶️',name:'YouTube — The Root System',desc:'Watch time, subscriber count, and video performance tracked weekly.'},
+    ],
+    sends:[
+      {icon:'🌀',name:'Skool Portal',desc:'Daily check-in posts keep the community alive and model accountability for members.'},
+      {icon:'🧬',name:'Human Design — The Source Code',desc:'Tracking reveals your personal energy patterns — which days you create vs. rest.'},
+    ],
+    action:'Open your VBD tracker right now and log today. If you have missed days, start fresh today — not Monday, not next week. The North Star is always there. You just have to look up.'
+  }
+};
+
+// Node → which lines to light (by data-n value)
+const NC = {
+  portal: ['portal,beacon','beacon,portal','portal,yt','portal,ig','portal,tt','portal,ore','portal,ads','hd,portal','yt,portal','ig,portal','tt,portal','live,portal','ore,portal','ads,portal','dms,portal','tracker,portal'],
+  hd:     ['hd,portal','hd,yt','hd,ig','hd,beacon'],
+  yt:     ['yt,portal','portal,yt','yt,ig','yt,tt','yt,ads','hd,yt','ore,yt','ads,yt'],
+  ig:     ['ig,portal','portal,ig','ig,dms','ig,ads','ig,tt','tt,ig','ore,ig','ads,ig','live,ig'],
+  tt:     ['tt,portal','portal,tt','tt,ig','ig,tt','tt,live','ore,tt','yt,tt'],
+  live:   ['live,portal','live,dms','live,ig','tt,live'],
+  ore:    ['ore,portal','portal,ore','ore,yt','ore,ig','ore,tt'],
+  beacon: ['portal,beacon','beacon,portal','hd,beacon'],
+  ads:    ['ads,portal','portal,ads','ads,yt','ads,ig','yt,ads','ig,ads'],
+  dms:    ['dms,portal','ig,dms','live,dms'],
+  tracker:['tracker,portal']
+};
+
+let activeNode = null;
+
+function tap(id) {
+  if (activeNode === id) { reset(); activeNode=null; closePnl(); return; }
+  activeNode = id;
+  highlight(id);
+  openPanel(id);
+}
+
+function highlight(id) {
+  const active = new Set(NC[id]||[]);
+  const connNodes = new Set(['portal']);
+  // gather connected nodes
+  active.forEach(k => { const [a,b]=k.split(','); connNodes.add(a); connNodes.add(b); });
+  connNodes.add(id);
+
+  document.querySelectorAll('.node-group').forEach(g => {
+    const n = g.getAttribute('data-node');
+    g.classList.toggle('dimmed', !connNodes.has(n));
+    g.classList.toggle('lit', connNodes.has(n));
+  });
+  document.querySelectorAll('.cline').forEach(l => {
+    const key = l.getAttribute('data-n');
+    const on = active.has(key);
+    l.classList.toggle('lit', on);
+    l.classList.toggle('dim', !on);
+  });
+}
+
+function reset() {
+  document.querySelectorAll('.node-group').forEach(g => { g.classList.remove('dimmed','lit'); });
+  document.querySelectorAll('.cline').forEach(l => { l.classList.remove('lit','dim'); });
+}
+
+function openPanel(id) {
+  const d = ND[id]; if(!d) return;
+  document.getElementById('pIcon').textContent = d.icon;
+  document.getElementById('pIcon').className = 'picon'+(d.isCenter?' center':'');
+  document.getElementById('pName').textContent = d.name;
+  document.getElementById('pSub').textContent = d.sub;
+  document.getElementById('pTagline').textContent = d.tagline;
+  document.getElementById('pAct').textContent = d.action;
+  document.getElementById('pSections').innerHTML = `
+    <div class="psec"><div class="psec-label">🔮 What is this</div><p>${d.what}</p></div>
+    <div class="psec"><div class="psec-label">💡 Why it matters</div><p>${d.why}</p></div>
+    <div class="psec"><div class="psec-label">⚙️ How to use it</div><p>${d.how}</p></div>`;
+  const rc=(d.receives||[]).length, sc=(d.sends||[]).length;
+  document.getElementById('btnR').textContent=`Receives (${rc})`;
+  document.getElementById('btnS').textContent=`Sends (${sc})`;
+  const rH=(d.receives||[]).map(c=>crow(c,'r')).join('')||'<p style="color:var(--dim);font-size:12px;padding:8px 0">None defined.</p>';
+  const sH=(d.sends||[]).map(c=>crow(c,'s')).join('')||'<p style="color:var(--dim);font-size:12px;padding:8px 0">None defined.</p>';
+  document.getElementById('tcR').innerHTML=rH;
+  document.getElementById('tcS').innerHTML=sH;
+  document.getElementById('tcA').innerHTML=
+    `<div style="font-family:Montserrat,sans-serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);opacity:.65;margin-bottom:6px">Receives</div>${rH}`+
+    `<div style="font-family:Montserrat,sans-serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--bright);opacity:.65;margin:12px 0 6px">Sends</div>${sH}`;
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.tcon').forEach(c=>c.classList.remove('on'));
+  document.getElementById('btnR').classList.add('on');
+  document.getElementById('tcR').classList.add('on');
+  document.getElementById('rightPanel').classList.add('open');
+  document.getElementById('panelInner').scrollTop=0;
+}
+
+function crow(c,dir) {
+  return `<div class="crow"><div class="cicon">${c.icon}</div><div class="cdir ${dir}">${dir==='r'?'←':'→'}</div><div class="cbody"><div class="cname">${c.name}</div><div class="cdesc">${c.desc}</div></div></div>`;
+}
+
+function stab(tab,btn) {
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.tcon').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById({r:'tcR',s:'tcS',a:'tcA'}[tab]).classList.add('on');
+}
+
+function closePnl() {
+  document.getElementById('rightPanel').classList.remove('open');
+  reset(); activeNode=null;
+}
+
+// Guided paths — highlight sequence of nodes
+let pathTimer=null;
+function runPath(ids) {
+  clearTimeout(pathTimer);
+  reset(); closePnl();
+  let i=0;
+  function step() {
+    if(i>=ids.length){reset();return;}
+    const id=ids[i];
+    if(id&&ND[id]){highlight(id); openPanel(id);}
+    i++;
+    pathTimer=setTimeout(step,2200);
+  }
+  step();
+}
+</script>
+</body>
+</html>
